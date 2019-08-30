@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <style type="text/css">
+      .panel {
+        border: solid 1px;
+        margin-top: 10px;
+        margin-left: 10px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+      }
+      .panel1 {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+      }
+      .panel2 {
+        border: solid 1px;
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+      }
+      .panel3{
+        border: solid 1px;
+        padding: 10px 10px 10px 10px ;
+      }
+      .logPanel {
+        overflow: auto;
+        white-space: pre;
+      }
+    </style>
+    <script src='http://libs.baidu.com/jquery/2.1.1/jquery.min.js'></script>
+  </head>
+  <body>
+    <div class="panel2">
+      <div class="panel" style="position: relative; height: 200px; ">
+        <div id="info" class="logPanel" style="border: solid 1px; position: absolute; top: 10px; left: 10px; right: 430px; bottom: 10px;"></div>
+        <div class="" style="width: 200px; border: solid 1px; position: absolute; top: 10px; right: 10px; bottom: 10px;">
+          <button id="loginOut" style="width: 100%">退出登录</button>
+          <select id="fileList" style="width: 100%">
+            <% files.forEach(function(a) { %>
+              <option value="<%= a %>"> <%=  a %> </option>
+            <% }) %>
+          </select>
+          <script type="text/javascript">
+            $('#fileList').val('<%= jarFile %>')
+          </script>
+          <button id="stop" style="width: 100%">停止</button>
+          <button id="restart" style="width: 100%">重启</button>
+          <button id="deleteJar" style="width: 100%">删除JAR</button>
+          <input id="fileInput" type="file" name="content" accept=".jar" style="display: none" />
+          <button id="fileUpload" style="width: 100%">上传文件</button>
+          <div id="uploadProgress" style="display: inline-block;width: 150px;height: 32px">上传进度：</div>
+        </div>
+        <div class="" style="width: 200px; border: solid 1px; position: absolute; top: 10px; right: 220px; bottom: 10px;">
+          <button style="width: 100%">前端文件管理</button>
+          <select id="frontFileList" style="width: 100%">
+            <% frontFiles.forEach(function(a) { %>
+              <option value="<%= a %>"> <%=  a %> </option>
+            <% }) %>
+          </select>
+          <script type="text/javascript">
+            $('#frontFileList').val('<%= frontFile %>')
+          </script>
+          <button id="setFront" style="width: 100%">启用</button>
+          <button id="deleteFront" style="width: 100%">删除前段文件</button>
+          <input id="frontFileInput" type="file" name="content" accept=".zip" style="display: none" />
+          <button id="frontFileUpload" style="width: 100%">上传前端文件</button>
+          <div id="frontFileUploadProgress" style="display: inline-block;width: 150px;height: 32px">上传进度：</div>
+        </div>
+      </div>
+      <div class="panel2" style="top: 220px;">
+        <div id="proInfo" class="panel1 logPanel"></div>
+      </div>
+    </div>
+    <script type="text/javascript">
+      function progressHandling(e) { 
+        if (e.lengthComputable) {
+          var percent = e.loaded/e.total*100;
+          $('#uploadProgress').text('上传进度：' + e.loaded + "/" + e.total+" bytes. " + percent.toFixed(2) + "%");  
+        }
+      }
+      $('#fileInput').change((e) => {
+          var formData = new FormData(); 
+          formData.append('file', e.target.files[0])
+          $.ajax({ 
+            type: 'post', 
+            url: "/", 
+            data: formData, 
+            cache: false, 
+            processData: false, 
+            contentType: false,
+            xhr: function(){ 
+              myXhr = $.ajaxSettings.xhr();  
+              if(myXhr.upload){
+                myXhr.upload.addEventListener('progress',progressHandling, false);   
+              }  
+             return myXhr;
+            },  
+          }).success(function (res) { 
+            $("#fileList").prepend("<option value='" + res.data + "'>" + res.data + "</option>");
+            $("#fileList").val(res.data)
+            alert(res.msg); 
+          }).error(function () { 
+            alert("上传失败"); 
+          }); 
+      })
+      function frontProgressHandling(e) { 
+        if (e.lengthComputable) {
+          var percent = e.loaded/e.total*100;
+          $('#frontFileUploadProgress').text('上传进度：' + e.loaded + "/" + e.total+" bytes. " + percent.toFixed(2) + "%");  
+        }
+      }
+      $('#frontFileInput').change((e) => {
+          console.log('asd')
+          var formData = new FormData(); 
+          formData.append('file', e.target.files[0])
+          $.ajax({ 
+            type: 'post', 
+            url: "/front", 
+            data: formData, 
+            cache: false, 
+            processData: false, 
+            contentType: false,
+            xhr: function(){ 
+              myXhr = $.ajaxSettings.xhr();  
+              if(myXhr.upload){
+                myXhr.upload.addEventListener('progress',frontProgressHandling, false);   
+              }  
+             return myXhr;
+            },  
+          }).success(function (res) { 
+            $("#frontFileList").prepend("<option value='" + res.data + "'>" + res.data + "</option>");
+            $("#frontFileList").val(res.data)
+            alert(res.msg); 
+          }).error(function (e) { 
+            console.log(e)
+            alert("上传失败"); 
+          }); 
+      })
+      function a_action(action, testFile) {
+        var jarFile = $('#fileList').val()
+        if (!jarFile || jarFile === undefined || jarFile === '') {
+          if (testFile === undefined) {
+            return alert('未选择文件')
+          }
+        }
+        $.ajax({
+          type: 'post', 
+          url: "/action", 
+          dataType: 'json',
+          contentType: "application/json; charset=utf-8",
+          data: JSON.stringify({
+            action: action,
+            jarFile: $('#fileList').val()
+          })
+        }).success(function (res) { 
+          alert(res.msg); 
+        }).error(function () { 
+          alert("操作失败"); 
+        }); 
+      }
+      function a_frontAction(action, testFile) {
+        var jarFile = $('#frontFileList').val()
+        if (!jarFile || jarFile === undefined || jarFile === '') {
+          if (testFile === undefined) {
+            return alert('未选择文件')
+          }
+        }
+        $.ajax({
+          type: 'post', 
+          url: "/frontAction", 
+          dataType: 'json',
+          contentType: "application/json; charset=utf-8",
+          data: JSON.stringify({
+            action: action,
+            frontFile: $('#frontFileList').val()
+          })
+        }).success(function (res) { 
+          alert(res.msg); 
+        }).error(function () { 
+          alert("操作失败"); 
+        }); 
+      }
+      // ==============
+      $('#restart').click((e) => {
+        a_action('restart')
+      })
+      $('#stop').click((e) => {
+        a_action('stop', true)
+      })
+      $('#loginOut').click((e) => {
+        window.location.href = '/loginOut'
+      })
+      $('#deleteJar').click((e) => {
+        a_action('deleteJar')
+        $("#fileList option[value='" + $('#fileList').val() + "']").remove(); 
+        $('#fileList').val('')
+      })
+      $('#fileUpload').click(() => {
+        $('#fileInput').click()
+      })
+      //  ==============
+      $('#setFront').click((e) => {
+        a_frontAction('setFront')
+      })
+      $('#deleteFront').click((e) => {
+        a_frontAction('deleteFront')
+        $("#frontFileList option[value='" + $('#frontFileList').val() + "']").remove(); 
+        $('#frontFileList').val('')
+      })
+      $('#frontFileUpload').click(() => {
+        $('#frontFileInput').click()
+      })
+      //  ===============
+      if(window.WebSocket){
+        const ws = new WebSocket('ws://'+ window.location.host + '/');
+        ws.onopen = function(e){
+            console.log("连接服务器成功");
+        }
+        ws.onclose = function(e){
+            console.log("服务器关闭");
+        }
+        ws.onerror = function(e){
+            console.log("连接出错", e);
+        }
+        ws.onmessage = function(e){
+          var msg = JSON.parse(e.data)
+          console.log(e.data)
+          switch(msg.act) {
+            case 'proInfo':
+              $('#proInfo').append(msg.data)
+            break;
+            case 'info':
+              $('#info').append(msg.data)
+            break;
+          }
+
+        }
+      }
+    </script>
+  </body>
+</html>

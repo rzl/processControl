@@ -1,0 +1,7 @@
+{
+  "port": 8089,
+  "password": "sharpi",
+  "Xms": "-Xms768m",
+  "Xmx": "-Xmx4096m",
+  "frontDir": "public"
+}
