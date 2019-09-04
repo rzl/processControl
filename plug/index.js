@@ -1,6 +1,12 @@
 var fs = require('fs')
-console.log(__dirname)
-var modules = fs.readdirSync(__dirname + '/modules' ).map((name) => {
-  return require(__dirname +  '/modules/' + name)
+fs.existsSync('./cache') || fs.mkdir('./cache')
+var modules = {}
+fs.readdirSync(__dirname + '/modules' ).forEach((name) => {
+  if (fs.existsSync(__dirname +  '/modules/' + name + '/index.js')) {
+    fs.existsSync('./cache/' + name) || fs.mkdir('./cache/' + name)
+    modules[name] = require(__dirname +  '/modules/' + name)
+    modules[name]['$model'] = name
+  }
 })
-console.log(modules)
+
+module.exports = modules

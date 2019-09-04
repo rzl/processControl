@@ -3,46 +3,37 @@ const { spawn } = require('child_process')
 var fs = require('fs')
 var moment = require('moment')
 
-var aprocessStatus = { 
-  aprocess: {}
-}
-var logFileName = 'aprocessupdate.txt'
-var client = {}
-
-
-function sendInfoToClient(data) {
-  global.ws.forEach((client) => {
-    client.json({ act: 'info', data: data })
-  })
+function MyExe(exeName, opt) {
+  this.aprocessStatus = {
+    aprocess: {}
+  }
+  this.opt = opt
+  this.onData = function() {}
+  this.onError = function() {}
 }
 
-function sendProInfoToClient(data) {
-  global.ws.forEach((client) => {
-    client.json({ act: 'proInfo', data: data })
-  })
-}
-function log(str) {
-  console.log(str)
+MyExe.prototype.f = function () {
+
 }
 
-function fileLog(str) {
+MyExe.prototype.fileLog function(str) {
+  var fileFormat = this.opt.logFileFormat ? this.opt.logFileFormat : 'YYYY-MM-DD-HH:mm:ss'
+  var filePath = './cache' + this.opt.$model + '/' + '' + moment().format(fileFormat) + '.log'
   var s = moment().format('YYYY-MM-DD HH:mm:ss') + ' ' + str + '\n'
-  fs.appendFileSync(logFileName, s)
-  sendInfoToClient(s)
+  fs.appendFileSync(filePath, s)
 }
 
-function start(file) {
+MyExe.prototype.start = function () {
   if (!file) { return }
-  if (!fs.existsSync(file)) { 
-    log(file + '文件不存在')
-    sendInfoToClient(file + '文件不存在')
+  if (!fs.existsSync(this.opt.)) { 
+    this.onError(new Error('文件不存在'))
     return 
   }
 
   process.title = file
   global.jarFile = file
   
-  var aprocess = spawn('java', ['-jar', global.config.Xms, global.config.Xmx, file]);
+  var aprocess = spawn(this.opt.cmd, this.opt.arg);
   aprocessStatus.aprocess = aprocess
   aprocess.isLive = true
 
@@ -69,6 +60,22 @@ function start(file) {
   log(str)
   fileLog(str)
 }
+/*function sendInfoToClient(data) {
+  global.ws.forEach((client) => {
+    client.json({ act: 'info', data: data })
+  })
+}
+
+function sendProInfoToClient(data) {
+  global.ws.forEach((client) => {
+    client.json({ act: 'proInfo', data: data })
+  })
+}
+function log(str) {
+  console.log(str)
+}
+*/
+
 
 function stop() {
   var aprocess = aprocessStatus.aprocess
@@ -90,4 +97,4 @@ function run(fileName) {
 
 
 
-module.exports = {restart, stop, aprocessStatus, sendInfoToClient};
+module.exports = MyExe;

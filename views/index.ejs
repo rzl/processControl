@@ -1,10 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html class="box">
   <head>
     <title><%= title %></title>
     <style type="text/css">
+      .el-tabs__content {
+        height: 100%
+      }
+      .box {
+        width: 100%;
+        height: 100%;
+        margin: 0px;
+      }
       .panel {
-        border: solid 1px;
+        border: solid 1px blue;
         margin-top: 10px;
         margin-left: 10px;
         margin-right: 10px;
@@ -16,7 +24,7 @@
         height: 100%;
       }
       .panel2 {
-        border: solid 1px;
+        border: solid 1px blue;
         position: absolute;
         top: 10px;
         left: 10px;
@@ -24,7 +32,7 @@
         bottom: 10px;
       }
       .panel3{
-        border: solid 1px;
+        border: solid 1px blue;
         padding: 10px 10px 10px 10px ;
       }
       .logPanel {
@@ -32,52 +40,82 @@
         white-space: pre;
       }
     </style>
-    <script src='http://libs.baidu.com/jquery/2.1.1/jquery.min.js'></script>
-  </head>
-  <body>
-    <div class="panel2">
-      <div class="panel" style="position: relative; height: 200px; ">
-        <div id="info" class="logPanel" style="border: solid 1px; position: absolute; top: 10px; left: 10px; right: 430px; bottom: 10px;"></div>
-        <div class="" style="width: 200px; border: solid 1px; position: absolute; top: 10px; right: 10px; bottom: 10px;">
-          <button id="loginOut" style="width: 100%">退出登录</button>
-          <select id="fileList" style="width: 100%">
-            <% files.forEach(function(a) { %>
-              <option value="<%= a %>"> <%=  a %> </option>
-            <% }) %>
-          </select>
-          <script type="text/javascript">
-            $('#fileList').val('<%= jarFile %>')
-          </script>
-          <button id="stop" style="width: 100%">停止</button>
-          <button id="restart" style="width: 100%">重启</button>
-          <button id="deleteJar" style="width: 100%">删除JAR</button>
-          <input id="fileInput" type="file" name="content" accept=".jar" style="display: none" />
-          <button id="fileUpload" style="width: 100%">上传文件</button>
-          <div id="uploadProgress" style="display: inline-block;width: 150px;height: 32px">上传进度：</div>
-        </div>
-        <div class="" style="width: 200px; border: solid 1px; position: absolute; top: 10px; right: 220px; bottom: 10px;">
-          <button style="width: 100%">前端文件管理</button>
-          <select id="frontFileList" style="width: 100%">
-            <% frontFiles.forEach(function(a) { %>
-              <option value="<%= a %>"> <%=  a %> </option>
-            <% }) %>
-          </select>
-          <script type="text/javascript">
-            $('#frontFileList').val('<%= frontFile %>')
-          </script>
-          <button id="setFront" style="width: 100%">启用</button>
-          <button id="deleteFront" style="width: 100%">删除前段文件</button>
-          <input id="frontFileInput" type="file" name="content" accept=".zip" style="display: none" />
-          <button id="frontFileUpload" style="width: 100%">上传前端文件</button>
-          <div id="frontFileUploadProgress" style="display: inline-block;width: 150px;height: 32px">上传进度：</div>
-        </div>
-      </div>
-      <div class="panel2" style="top: 220px;">
-        <div id="proInfo" class="panel1 logPanel"></div>
-      </div>
-    </div>
+    <link rel="stylesheet" href="./index.css">
+    <script src="./axios.min.js"></script>
     <script type="text/javascript">
-      function progressHandling(e) { 
+      //var url = 'http://192.168.100.217:8888'
+      //axios.defaults.baseURL = url;
+      //axios.defaults.baseURL = 'http://sharp-i.net:1333/';
+      var formatTime = function(datetime,fmt) {
+        if (fmt === undefined) {
+          fmt = 'yyyy-MM-dd hh:mm:ss'
+        }
+        var date = datetime ? new Date(datetime) : new Date()
+        var o = {
+            "M+": date.getMonth() + 1, //月份 
+            "d+": date.getDate(), //日 
+            "h+": date.getHours(), //小时 
+            "m+": date.getMinutes(), //分 
+            "s+": date.getSeconds(), //秒 
+            "q+": Math.floor((date.getMonth() + 3) / 3), //季度 
+            "S": date.getMilliseconds() //毫秒 
+        };
+        if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (date.getFullYear() + "").substr(4 - RegExp.$1.length));
+        for (var k in o)
+        if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+        return fmt;
+      }
+    </script>
+  </head>
+  <body class="box">
+    <div id="app" class="box">
+      <el-tabs tab-position="top" v-model="activeName" @tab-click="handleClick" class="box">
+        <template v-for="(item, key) in plug">
+          <el-tab-pane :label="key" :name="key" class="box">
+            <div class="panel2">
+              <div class="panel" style="position: relative; height: 200px; ">
+                <div style="width: 100%;height: 100%">
+                  <el-row style="height: 100%">
+                    <el-col :span="12" style="height: 100%;padding: 10px;">
+                      <div class="logPanel" style="border: solid 1px blue;  width: 100%; height: 100%">
+                    
+                      </div>
+                    </el-col>
+                    <el-col :span="12" style="height: 100%;padding: 10px;display: flex;overflow-y: hidden; overflow-x: auto;">
+                      <template v-for="(p,index) in item.process">
+                        <div  class="" style="height: 100%; width: 200px; border: solid 1px blue; display: inline-block; margin-left: 10px">
+                          <button style="width: 100%">前端文件管理</button>
+                          <select  style="width: 100%">
+                            <% frontFiles.forEach(function(a) { %>
+                              <option value="<%= a %>"> <%=  a %> </option>
+                            <% }) %>
+                          </select>
+                          <button  style="width: 100%">启用</button>
+                          <button style="width: 100%">删除前段文件</button>
+                          <input  type="file" name="content" accept=".zip" style="display: none" />
+                          <button  style="width: 100%">上传前端文件</button>
+                          <div style="display: inline-block;width: 150px;height: 32px">上传进度：</div>
+                        </div>
+                      </template>
+                    </el-col>
+                  </el-row>
+
+                  
+                </div>
+              </div>
+              <div class="panel2" style="top: 220px;">
+                <div  class="panel1 logPanel"></div>
+              </div>
+            </div>
+          </el-tab-pane>
+
+        </template>
+        
+      </el-tabs>
+    </div>
+    
+    <script type="text/javascript">
+      /*function progressHandling(e) { 
         if (e.lengthComputable) {
           var percent = e.loaded/e.total*100;
           $('#uploadProgress').text('上传进度：' + e.loaded + "/" + e.total+" bytes. " + percent.toFixed(2) + "%");  
@@ -184,9 +222,9 @@
         }).error(function () { 
           alert("操作失败"); 
         }); 
-      }
+      }*/
       // ==============
-      $('#restart').click((e) => {
+      /*$('#restart').click((e) => {
         a_action('restart')
       })
       $('#stop').click((e) => {
@@ -214,7 +252,7 @@
       })
       $('#frontFileUpload').click(() => {
         $('#frontFileInput').click()
-      })
+      })*/
       //  ===============
       if(window.WebSocket){
         const ws = new WebSocket('ws://'+ window.location.host + '/');
@@ -232,10 +270,10 @@
           console.log(e.data)
           switch(msg.act) {
             case 'proInfo':
-              $('#proInfo').append(msg.data)
+              //$('#proInfo').append(msg.data)
             break;
             case 'info':
-              $('#info').append(msg.data)
+              //$('#info').append(msg.data)
             break;
           }
 
@@ -243,4 +281,39 @@
       }
     </script>
   </body>
+  <script src="./vue.js"></script>
+  <script src="./index.js"></script>
+  <script type="text/javascript">
+    new Vue({
+      el: '#app',
+      created: function() {
+        this.m_getPlug()
+      },
+      methods: {
+        handleClick() {
+          console.log(this.activeName)
+        },
+        m_getPlug() {
+          axios.get('/plug').then((res) => {
+            console.log(res.data)
+            this.plug = res.data.data
+          })
+        },
+        save(){
+          axios.post('/save',{data: this.c}).then((res) => {
+            this.$message('保存成功')
+          })
+          .catch(function (error) {
+            this.$message('保存失败')
+        })
+        }
+      },
+      data: function() {
+        return { 
+          activeName: '',
+          plug: []
+        }
+      }
+    })
+  </script>
 </html>

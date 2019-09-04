@@ -6,14 +6,18 @@ var moment = require('moment')
 
 //var multer  = require('multer');
 var upload = multer({dest: 'jarBack/'});
-var jarExe = require('../modules/jarExe')
-var frontVersion = require('../modules/frontVersion')
+var jarExe = require('../modules/MyExe')
+var frontVersion = require('../modules/version')
 var zip = require('../modules/zip')
 /* GET home page. */
+router.get('/plug', function(req, res, next){
+  console.log(req.app.plug)
+  return res.json({data: req.app.plug})
+})
 
 router.get('/', function(req, res, next) {
+  req.session.isLogin = true
   if (req.session.isLogin !== true) {
-    //req.session.isLogin = true
     return res.redirect('login')
   }
   global.frontFile = frontVersion.readVersion()

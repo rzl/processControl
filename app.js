@@ -1,5 +1,4 @@
-var a = require('./plug')
-return
+var plug = require('./plug')
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
@@ -7,6 +6,7 @@ var bodyParser = require('body-parser');
 var session = require('express-session');
 
 var app = express();
+app.plug = plug
 var expressWs = require('express-ws')(app);
 
 var routes = require('./routes/index');

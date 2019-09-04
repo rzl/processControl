@@ -1,13 +1,9 @@
 var argv = process.argv.splice(2);
-var firstJar = argv[0]
 //require('ejs');
 var fs = require('fs')
 global.config = {
   port: 3000,
-  password: '123456',
-  Xms: '-Xms768m',
-  Xmx: '-Xmx4096m',
-  frontDir: 'public'
+  password: '123456'
 }
 global.ws = []
 
@@ -18,14 +14,10 @@ if (fs.existsSync(configFileName)) {
 }
 
 var app = require('../app');
-return
+
 //var debug = require('debug')('jarUpdate:server');
 var http = require('http');
 
-var jarExe = require('../modules/jarExe')
-if (firstJar != undefined) {
-  jarExe.restart(firstJar)
-}
 /**
  * Get port from environment and store in Express.
  */
