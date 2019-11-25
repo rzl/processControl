@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html class="box">
+  <head>
+    <title><%= title %></title>
+    <style type="text/css">
+      .el-tabs__content {
+        height: 100%
+      }
+      .box {
+        width: 100%;
+        height: 100%;
+        margin: 0px;
+      }
+      .panel {
+        border: solid 1px blue;
+        margin-top: 10px;
+        margin-left: 10px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+      }
+      .panel1 {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+      }
+      .panel2 {
+        border: solid 1px blue;
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+      }
+      .panel3{
+        border: solid 1px blue;
+        padding: 10px 10px 10px 10px ;
+      }
+      .logPanel {
+        overflow: auto;
+        white-space: pre;
+      }
+    </style>
+    <link rel="stylesheet" href="./index.css">
+    <script src="./axios.min.js"></script>
+    <script type="text/javascript">
+      //var url = 'http://192.168.100.217:8888'
+      //axios.defaults.baseURL = url;
+      //axios.defaults.baseURL = 'http://sharp-i.net:1333/';
+      var formatTime = function(datetime,fmt) {
+        if (fmt === undefined) {
+          fmt = 'yyyy-MM-dd hh:mm:ss'
+        }
+        var date = datetime ? new Date(datetime) : new Date()
+        var o = {
+            "M+": date.getMonth() + 1, //月份 
+            "d+": date.getDate(), //日 
+            "h+": date.getHours(), //小时 
+            "m+": date.getMinutes(), //分 
+            "s+": date.getSeconds(), //秒 
+            "q+": Math.floor((date.getMonth() + 3) / 3), //季度 
+            "S": date.getMilliseconds() //毫秒 
+        };
+        if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (date.getFullYear() + "").substr(4 - RegExp.$1.length));
+        for (var k in o)
+        if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+        return fmt;
+      }
+    </script>
+  </head>
+  <body class="box">
+    <div id="app" class="box">
+      <el-tabs tab-position="left" v-model="activeName" @tab-click="handleClick" class="box">
+        <template v-for="(model, key) in models">
+          <el-tab-pane :label="key" :name="key" class="box">
+            <div >
+              <div style="position: relative;">
+                <div style="width: 100%;height: 100%">
+                  <el-row style="height: 100%">
+                    <el-col :span="24" style="">
+                      <template v-for="(p,index) in model.$plugs">
+                        <div  class="" style="height: 100%; width: 200px; border: solid 1px blue; display: inline-block; margin-left: 10px; margin-top: 10px;">
+                          <button style="width: 100%">{{p.title ? p.title : '未命名'}}</button>
+                          <select v-model="p.$version" v-if="p.selecter" style="width: 100%">
+                            <option v-for="(v) in p.$versionList" :value="v"> {{v}} </option>
+                          </select>
+                          <button v-for="(b) in p.button" @click="m_buttonClick(p, b)" style="width: 100%">{{b.title}}</button>
+                          <input  @change="(e) => {m_change(e, p)}" type="file" name="content" :accept="p.accept" style="display: none" :ref="p.$model+p.$name"/>
+                          <button v-if="p.uploader"  @click="m_upload(p)" style="width: 100%">上传前端文件</button>
+                          <div v-if="p.uploader" style="display: inline-block;width: 150px;height: 32px">上传进度： {{p.uploadProgress}} %</div>
+                          <button @click="p.$logShow = true" style="width: 100%">日志</button>
+                        </div>
+                        <div style="resize: both; border: 1px solid; overflow: hidden;position: absolute; width: 1000px; height: 400px; " v-show="p.$logShow" :ref="'log_' + p.$model + p.$name">
+                          <div @mousedown="(e) => {m_mousedown(p, e, this)}" @mousemove="(e) => {m_mousemove(p, e, this)}" @mouseup="(e) => {m_mouseup(p, e, this)}" @mouseouta="(e) => {m_mouseup(p, e, this)}" style="z-index: 999; width: 100%; background-color: yellow; height: 30px; text-align: center;">
+                            {{ '模块名：' + p.$model + ' 插件名：' + p.$name}} 
+                            <span style="float: right; margin-top: 5px; margin-right: 5px;" @click="p.$logShow = false"> X </span>
+                          </div>
+                          <div class="logPanel" style="border: solid 1px blue;  width: 400px; height: 100%">
+                            <template v-for="(info, index) in model.$info">
+                              <div>{{info}}</div>
+                            </template>
+                          </div>
+                          <div class="panel2" style="top: 220px;">
+                            <div  class="panel1 logPanel"></div>
+                          </div>
+                        </div>
+                      </template>
+                    </el-col>
+                  </el-row>
+                </div>
+              </div>
+            </div>
+          </el-tab-pane>
+
+        </template>
+        
+      </el-tabs>
+    </div>
+    
+    <script type="text/javascript">
+    
+      //  ===============
+      if(window.WebSocket){
+        const ws = new WebSocket('ws://'+ window.location.host + '/');
+        ws.onopen = function(e){
+            console.log("连接服务器成功");
+        }
+        ws.onclose = function(e){
+            console.log("服务器关闭");
+        }
+        ws.onerror = function(e){
+            console.log("连接出错", e);
+        }
+        ws.onmessage = function(e){
+          var msg = JSON.parse(e.data)
+          switch(msg.act) {
+            case 'proInfo':
+              vue.models[msg.$model]['$proInfo'].push(msg.data)
+            break;
+            case 'info':
+              vue.models[msg.$model]['$info'].push(msg.data)
+            break;
+          }
+
+        }
+      }
+    </script>
+  </body>
+  <script src="./vue.js"></script>
+  <script src="./index.js"></script>
+  <script type="text/javascript">
+    var vue = new Vue({
+      el: '#app',
+      created: function() {
+        this.m_getPlug()
+      },
+      methods: {
+        m_msg(res) {
+          res.data.code === 0 ? 
+            this.$message.success(res.data.msg) :
+            this.$message.error(res.data.msg)
+        },
+        handleClick() {
+          console.log(this.activeName)
+        },
+        m_buttonClick(plug, b) {
+          axios.post('/action', 
+            { 
+              plug: plug,
+              action: b.action
+            }).then((res) => {
+              this.m_msg(res)
+            })
+        },
+        m_change(e,plug) {
+          console.log(e)
+          console.log(plug)
+          var formData = new FormData(); 
+          formData.append('file', e.target.files[0])
+          formData.append('model', plug.$model)
+          formData.append('name', plug.$name)
+          axios.post('/',formData, {
+            onUploadProgress: (progressEvent) => {
+              plug.uploadProgress = progressEvent.loaded / progressEvent.total * 100 | 0
+            }
+          }).then((res)=> {
+            if (code === 0) {
+              this.m_msg(res)  
+              plug.$versionList.push(res.data)
+            }
+          })
+        },
+        m_upload(plug) {
+          this.$refs[plug.$model + plug.$name][0].click()
+        },
+        m_getPlug() {
+          axios.get('/plug').then((res) => {
+            console.log(res.data)
+            this.models = res.data.data
+          })
+        },
+        save(){
+          axios.post('/save',{data: this.c}).then((res) => {
+            this.$message('保存成功')
+          })
+          .catch(function (error) {
+            this.$message('保存失败')
+        })
+        },
+        m_mousedown(plug, e, el) {
+          this.zIndex++
+          e.target.parentElement.style.zIndex = this.zIndex
+          plug.$mousex = e.clientX
+          plug.$mousey = e.clientY
+          plug.$left = e.target.parentElement.offsetLeft;
+          plug.$top = e.target.parentElement.offsetTop;
+          plug.$ismouve = true
+          this.log.e = e
+          this.log.plug = plug
+        },
+        m_mouseup(plug, e, el) {
+          plug.$ismouve = false
+          this.log.e = null
+          this.log.plug = null
+        },
+        m_mousemove(plug, e, el) {
+          if (plug.$ismouve) {
+            e.target.parentElement.style.left = plug.$left + e.clientX - plug.$mousex + 'px';
+            e.target.parentElement.style.top = plug.$top + e.clientY - plug.$mousey + 'px';
+          }
+        },
+        m_windowMousemove(e) {
+          e.preventDefault()
+          console.log(this.log)
+          var el = this.log.e.target
+          var plug = this.log.plug
+          el.parentElement.style.left = plug.$left + e.clientX - plug.$mousex + 'px';
+          el.parentElement.style.top = plug.$top + e.clientY - plug.$mousey + 'px';
+        }
+      },
+      data: function() {
+        return { 
+          activeName: '',
+          models: [],
+          log:{
+            e: null,
+            plug: null
+          },
+          zIndex: 0
+        }
+      }
+    })
+window.onmousemove = function(e) {
+  if (vue.$data.log.e) {
+    vue.m_windowMousemove(e)
+  }
+}
+
+window.onmouseup = function(e) {
+          vue.$data.log.e = null
+          vue.$data.log.plug = null
+}
+  </script>
+</html>

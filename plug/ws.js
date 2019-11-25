@@ -1,0 +1,1 @@
+module.exports = global.ws ? global.ws : []
