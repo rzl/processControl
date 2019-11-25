@@ -6,13 +6,13 @@ var moment = require('moment')
 
 //var multer  = require('multer');
 var upload = multer({dest: 'jarBack/'});
-var jarExe = require('../modules/MyExe')
-var frontVersion = require('../modules/version')
-var zip = require('../modules/zip')
+var jarExe = {}
+var frontVersion = {}
+var zip = {}
 /* GET home page. */
 router.get('/plug', function(req, res, next){
   console.log(req.app.plug)
-  return res.json({data: req.app.plug})
+  return res.json({data: req.app.plug.modelMap})
 })
 
 router.get('/', function(req, res, next) {
@@ -20,13 +20,8 @@ router.get('/', function(req, res, next) {
   if (req.session.isLogin !== true) {
     return res.redirect('login')
   }
-  global.frontFile = frontVersion.readVersion()
   res.render('index', { 
-    title: 'Express',
-    files: fs.readdirSync('./').filter((dir) => { if (dir.indexOf('.jar') > -1) { return dir } }),
-    frontFiles: fs.readdirSync(global.config.frontDir).filter((dir) => { if (dir.indexOf('.zip') > -1) { return dir } }),
-    jarFile: global.jarFile,
-    frontFile: global.frontFile
+    title: 'Express'
   });
 });
 
@@ -63,29 +58,18 @@ router.get('/loginOut', function(req, res, next) {
 });
 
 router.post('/', upload.any(), function(req, res, next) {
-    console.log(req.files);  // 上传的文件信息
-    newFileName = req.files[0].originalname.replace('.jar', moment().format('-YYYY-MM-DD-HH-mm-ss') + '.jar')
-    fs.renameSync(req.files[0].path, newFileName)
-    if (fs.existsSync(newFileName)) {
-      res.json({
-        code: 0,
-        msg: '上传成功',
-        data: newFileName
-      })
-    } else {
-      res.json({
+    var plug = req.app.plug.getPlug(req.body.model,req.body.name)
+    if (!plug) {
+      return res.json({
         code: -1,
-        msg: '上传失败'
+        msg: '上传成功，但是找不到对应的插件'
       })
     }
-});
-
-router.post('/front', upload.any(), function(req, res, next) {
-    console.log(req.files);  // 上传的文件信息
-    newFileName = req.files[0].originalname.replace('.zip', moment().format('-YYYY-MM-DD-HH-mm-ss') + '.zip')
-    newFilePathName = global.config.frontDir + '/' + newFileName
-    fs.renameSync(req.files[0].path, newFilePathName)
-    if (fs.existsSync(newFilePathName)) {
+    var newFileName = req.files[0].originalname.replace(plug.accept, moment().format('-YYYY-MM-DD-HH-mm-ss') + plug.accept)
+    var newFilePath = plug.$cacheDir + '/upload/' + newFileName
+    fs.renameSync(req.files[0].path, newFilePath)
+    if (fs.existsSync(newFilePath)) {
+      plug.afterUpload(req, res)
       res.json({
         code: 0,
         msg: '上传成功',
@@ -106,23 +90,22 @@ router.post('/action', function(req, res, next) {
   if (req.body.action === undefined) {
     return res.json({ code: -1, msg: '没有指令'})
   }
-  var jarFile = req.body.jarFile
-  switch(req.body.action) {
-    case 'restart':
-      jarExe.restart(req.body.jarFile)
-    break
-    case 'stop':
-      jarExe.stop(req.body.jarFile)
-    break
-    case 'deleteJar':
-      if (!fs.existsSync('jarBack')) {
-        fs.mkdirSync('jarBack')
-      }
-      fs.renameSync(req.body.jarFile, 'jarBack/' + req.body.jarFile)
-      return res.json({ code: 0, msg: '删除成功' })
-    break
+  var plug = req.app.plug.getPlugByPlug(req.body.plug)
+  if (!plug) {
+    return res.json({ code: -1, msg: '找不到对应的插件' })
+  } 
+  var fn = null
+  var action = req.body.action
+  if (plug.actions[action]) {
+    fn = plug.actions[action]
+  } else if (plug.$actions[action]) {
+    fn = plug.$actions[action]
+  } else {
+    return res.json({ code: -1, msg: '插件未定义方法' + action })
   }
-  res.json({ code: 0, msg: '运行成功'})
+  fn.apply(plug, [req, res, () => {
+    res.json({ code: 0, msg: '运行成功'})  
+  }])
 })
 
 router.post('/frontAction', function(req, res, next) {
@@ -135,14 +118,7 @@ router.post('/frontAction', function(req, res, next) {
   var frontFile = req.body.frontFile
   switch(req.body.action) {
     case 'setFront':
-      var src = global.config.frontDir + '/' + req.body.frontFile
-      var dest = global.config.frontDir
-      zip.unzip(src, dest, () => {
-        frontVersion.saveVersion(req.body.frontFile)
-        global.frontFile = req.body.frontFile
-        res.json({ code: 0, msg: '应用成功' })
-        jarExe.sendInfoToClient('前端版本： ' + global.frontFile)
-      })
+
     break
     case 'deleteFront':
       var dir = global.config.frontDir + '/zipBack'
@@ -162,7 +138,7 @@ router.ws('/', function(ws, req) {
     console.log(msg);
   });
   ws.on('close', () => {
-    console.log(ws.index)
+    console.log('close',ws.index)
     global.ws.splice(ws.index, 1)
   })
   ws.on('error', () => {
@@ -172,20 +148,6 @@ router.ws('/', function(ws, req) {
   ws.json = function(str) {
     ws.send(JSON.stringify(str))
   }
-  ws.json({
-    act: 'info',
-    data: '当前运行文件：' + global.jarFile +'\n'
-  })
-  var str = ''
-  if (jarExe.aprocessStatus.aprocess.isLive === true) {
-    str = '运行中 pid：' + jarExe.aprocessStatus.aprocess.pid + '\n'
-  } else {
-    str = '已关闭\n'
-  }
-  ws.json({
-    act: 'info',
-    data: '运行状态： ' + str + '前端版本： ' + global.frontFile + '\n'
-  })
   console.log(global.ws.length)
 });
 

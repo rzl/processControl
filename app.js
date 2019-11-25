@@ -1,4 +1,4 @@
-var plug = require('./plug')
+var PlugManage = require('./plug')
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
@@ -6,8 +6,9 @@ var bodyParser = require('body-parser');
 var session = require('express-session');
 
 var app = express();
-app.plug = plug
 var expressWs = require('express-ws')(app);
+
+app.plug = new PlugManage({ws: expressWs})
 
 var routes = require('./routes/index');
 var users = require('./routes/users');

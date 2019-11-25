@@ -69,42 +69,44 @@
   </head>
   <body class="box">
     <div id="app" class="box">
-      <el-tabs tab-position="top" v-model="activeName" @tab-click="handleClick" class="box">
-        <template v-for="(item, key) in plug">
+      <el-tabs tab-position="left" v-model="activeName" @tab-click="handleClick" class="box">
+        <template v-for="(model, key) in models">
           <el-tab-pane :label="key" :name="key" class="box">
-            <div class="panel2">
-              <div class="panel" style="position: relative; height: 200px; ">
+            <div >
+              <div style="position: relative;">
                 <div style="width: 100%;height: 100%">
                   <el-row style="height: 100%">
-                    <el-col :span="12" style="height: 100%;padding: 10px;">
-                      <div class="logPanel" style="border: solid 1px blue;  width: 100%; height: 100%">
-                    
-                      </div>
-                    </el-col>
-                    <el-col :span="12" style="height: 100%;padding: 10px;display: flex;overflow-y: hidden; overflow-x: auto;">
-                      <template v-for="(p,index) in item.process">
-                        <div  class="" style="height: 100%; width: 200px; border: solid 1px blue; display: inline-block; margin-left: 10px">
-                          <button style="width: 100%">前端文件管理</button>
-                          <select  style="width: 100%">
-                            <% frontFiles.forEach(function(a) { %>
-                              <option value="<%= a %>"> <%=  a %> </option>
-                            <% }) %>
+                    <el-col :span="24" style="">
+                      <template v-for="(p,index) in model.$plugs">
+                        <div  class="" style="height: 100%; width: 200px; border: solid 1px blue; display: inline-block; margin-left: 10px; margin-top: 10px;">
+                          <button style="width: 100%">{{p.title ? p.title : '未命名'}}</button>
+                          <select v-model="p.$version" v-if="p.selecter" style="width: 100%">
+                            <option v-for="(v) in p.$versionList" :value="v"> {{v}} </option>
                           </select>
-                          <button  style="width: 100%">启用</button>
-                          <button style="width: 100%">删除前段文件</button>
-                          <input  type="file" name="content" accept=".zip" style="display: none" />
-                          <button  style="width: 100%">上传前端文件</button>
-                          <div style="display: inline-block;width: 150px;height: 32px">上传进度：</div>
+                          <button v-for="(b) in p.button" @click="m_buttonClick(p, b)" style="width: 100%">{{b.title}}</button>
+                          <input  @change="(e) => {m_change(e, p)}" type="file" name="content" :accept="p.accept" style="display: none" :ref="p.$model+p.$name"/>
+                          <button v-if="p.uploader"  @click="m_upload(p)" style="width: 100%">上传前端文件</button>
+                          <div v-if="p.uploader" style="display: inline-block;width: 150px;height: 32px">上传进度： {{p.uploadProgress}} %</div>
+                          <button @click="p.$logShow = true" style="width: 100%">日志</button>
+                        </div>
+                        <div style="resize: both; border: 1px solid; overflow: hidden;position: absolute; width: 1000px; height: 400px; " v-show="p.$logShow" :ref="'log_' + p.$model + p.$name">
+                          <div @mousedown="(e) => {m_mousedown(p, e, this)}" @mousemove="(e) => {m_mousemove(p, e, this)}" @mouseup="(e) => {m_mouseup(p, e, this)}" @mouseouta="(e) => {m_mouseup(p, e, this)}" style="z-index: 999; width: 100%; background-color: yellow; height: 30px; text-align: center;">
+                            {{ '模块名：' + p.$model + ' 插件名：' + p.$name}} 
+                            <span style="float: right; margin-top: 5px; margin-right: 5px;" @click="p.$logShow = false"> X </span>
+                          </div>
+                          <div class="logPanel" style="border: solid 1px blue;  width: 400px; height: 100%">
+                            <template v-for="(info, index) in model.$info">
+                              <div>{{info}}</div>
+                            </template>
+                          </div>
+                          <div class="panel2" style="top: 220px;">
+                            <div  class="panel1 logPanel"></div>
+                          </div>
                         </div>
                       </template>
                     </el-col>
                   </el-row>
-
-                  
                 </div>
-              </div>
-              <div class="panel2" style="top: 220px;">
-                <div  class="panel1 logPanel"></div>
               </div>
             </div>
           </el-tab-pane>
@@ -115,144 +117,7 @@
     </div>
     
     <script type="text/javascript">
-      /*function progressHandling(e) { 
-        if (e.lengthComputable) {
-          var percent = e.loaded/e.total*100;
-          $('#uploadProgress').text('上传进度：' + e.loaded + "/" + e.total+" bytes. " + percent.toFixed(2) + "%");  
-        }
-      }
-      $('#fileInput').change((e) => {
-          var formData = new FormData(); 
-          formData.append('file', e.target.files[0])
-          $.ajax({ 
-            type: 'post', 
-            url: "/", 
-            data: formData, 
-            cache: false, 
-            processData: false, 
-            contentType: false,
-            xhr: function(){ 
-              myXhr = $.ajaxSettings.xhr();  
-              if(myXhr.upload){
-                myXhr.upload.addEventListener('progress',progressHandling, false);   
-              }  
-             return myXhr;
-            },  
-          }).success(function (res) { 
-            $("#fileList").prepend("<option value='" + res.data + "'>" + res.data + "</option>");
-            $("#fileList").val(res.data)
-            alert(res.msg); 
-          }).error(function () { 
-            alert("上传失败"); 
-          }); 
-      })
-      function frontProgressHandling(e) { 
-        if (e.lengthComputable) {
-          var percent = e.loaded/e.total*100;
-          $('#frontFileUploadProgress').text('上传进度：' + e.loaded + "/" + e.total+" bytes. " + percent.toFixed(2) + "%");  
-        }
-      }
-      $('#frontFileInput').change((e) => {
-          console.log('asd')
-          var formData = new FormData(); 
-          formData.append('file', e.target.files[0])
-          $.ajax({ 
-            type: 'post', 
-            url: "/front", 
-            data: formData, 
-            cache: false, 
-            processData: false, 
-            contentType: false,
-            xhr: function(){ 
-              myXhr = $.ajaxSettings.xhr();  
-              if(myXhr.upload){
-                myXhr.upload.addEventListener('progress',frontProgressHandling, false);   
-              }  
-             return myXhr;
-            },  
-          }).success(function (res) { 
-            $("#frontFileList").prepend("<option value='" + res.data + "'>" + res.data + "</option>");
-            $("#frontFileList").val(res.data)
-            alert(res.msg); 
-          }).error(function (e) { 
-            console.log(e)
-            alert("上传失败"); 
-          }); 
-      })
-      function a_action(action, testFile) {
-        var jarFile = $('#fileList').val()
-        if (!jarFile || jarFile === undefined || jarFile === '') {
-          if (testFile === undefined) {
-            return alert('未选择文件')
-          }
-        }
-        $.ajax({
-          type: 'post', 
-          url: "/action", 
-          dataType: 'json',
-          contentType: "application/json; charset=utf-8",
-          data: JSON.stringify({
-            action: action,
-            jarFile: $('#fileList').val()
-          })
-        }).success(function (res) { 
-          alert(res.msg); 
-        }).error(function () { 
-          alert("操作失败"); 
-        }); 
-      }
-      function a_frontAction(action, testFile) {
-        var jarFile = $('#frontFileList').val()
-        if (!jarFile || jarFile === undefined || jarFile === '') {
-          if (testFile === undefined) {
-            return alert('未选择文件')
-          }
-        }
-        $.ajax({
-          type: 'post', 
-          url: "/frontAction", 
-          dataType: 'json',
-          contentType: "application/json; charset=utf-8",
-          data: JSON.stringify({
-            action: action,
-            frontFile: $('#frontFileList').val()
-          })
-        }).success(function (res) { 
-          alert(res.msg); 
-        }).error(function () { 
-          alert("操作失败"); 
-        }); 
-      }*/
-      // ==============
-      /*$('#restart').click((e) => {
-        a_action('restart')
-      })
-      $('#stop').click((e) => {
-        a_action('stop', true)
-      })
-      $('#loginOut').click((e) => {
-        window.location.href = '/loginOut'
-      })
-      $('#deleteJar').click((e) => {
-        a_action('deleteJar')
-        $("#fileList option[value='" + $('#fileList').val() + "']").remove(); 
-        $('#fileList').val('')
-      })
-      $('#fileUpload').click(() => {
-        $('#fileInput').click()
-      })
-      //  ==============
-      $('#setFront').click((e) => {
-        a_frontAction('setFront')
-      })
-      $('#deleteFront').click((e) => {
-        a_frontAction('deleteFront')
-        $("#frontFileList option[value='" + $('#frontFileList').val() + "']").remove(); 
-        $('#frontFileList').val('')
-      })
-      $('#frontFileUpload').click(() => {
-        $('#frontFileInput').click()
-      })*/
+    
       //  ===============
       if(window.WebSocket){
         const ws = new WebSocket('ws://'+ window.location.host + '/');
@@ -267,13 +132,12 @@
         }
         ws.onmessage = function(e){
           var msg = JSON.parse(e.data)
-          console.log(e.data)
           switch(msg.act) {
             case 'proInfo':
-              //$('#proInfo').append(msg.data)
+              vue.models[msg.$model]['$proInfo'].push(msg.data)
             break;
             case 'info':
-              //$('#info').append(msg.data)
+              vue.models[msg.$model]['$info'].push(msg.data)
             break;
           }
 
@@ -284,19 +148,54 @@
   <script src="./vue.js"></script>
   <script src="./index.js"></script>
   <script type="text/javascript">
-    new Vue({
+    var vue = new Vue({
       el: '#app',
       created: function() {
         this.m_getPlug()
       },
       methods: {
+        m_msg(res) {
+          res.data.code === 0 ? 
+            this.$message.success(res.data.msg) :
+            this.$message.error(res.data.msg)
+        },
         handleClick() {
           console.log(this.activeName)
+        },
+        m_buttonClick(plug, b) {
+          axios.post('/action', 
+            { 
+              plug: plug,
+              action: b.action
+            }).then((res) => {
+              this.m_msg(res)
+            })
+        },
+        m_change(e,plug) {
+          console.log(e)
+          console.log(plug)
+          var formData = new FormData(); 
+          formData.append('file', e.target.files[0])
+          formData.append('model', plug.$model)
+          formData.append('name', plug.$name)
+          axios.post('/',formData, {
+            onUploadProgress: (progressEvent) => {
+              plug.uploadProgress = progressEvent.loaded / progressEvent.total * 100 | 0
+            }
+          }).then((res)=> {
+            if (code === 0) {
+              this.m_msg(res)  
+              plug.$versionList.push(res.data)
+            }
+          })
+        },
+        m_upload(plug) {
+          this.$refs[plug.$model + plug.$name][0].click()
         },
         m_getPlug() {
           axios.get('/plug').then((res) => {
             console.log(res.data)
-            this.plug = res.data.data
+            this.models = res.data.data
           })
         },
         save(){
@@ -306,14 +205,59 @@
           .catch(function (error) {
             this.$message('保存失败')
         })
+        },
+        m_mousedown(plug, e, el) {
+          this.zIndex++
+          e.target.parentElement.style.zIndex = this.zIndex
+          plug.$mousex = e.clientX
+          plug.$mousey = e.clientY
+          plug.$left = e.target.parentElement.offsetLeft;
+          plug.$top = e.target.parentElement.offsetTop;
+          plug.$ismouve = true
+          this.log.e = e
+          this.log.plug = plug
+        },
+        m_mouseup(plug, e, el) {
+          plug.$ismouve = false
+          this.log.e = null
+          this.log.plug = null
+        },
+        m_mousemove(plug, e, el) {
+          if (plug.$ismouve) {
+            e.target.parentElement.style.left = plug.$left + e.clientX - plug.$mousex + 'px';
+            e.target.parentElement.style.top = plug.$top + e.clientY - plug.$mousey + 'px';
+          }
+        },
+        m_windowMousemove(e) {
+          e.preventDefault()
+          console.log(this.log)
+          var el = this.log.e.target
+          var plug = this.log.plug
+          el.parentElement.style.left = plug.$left + e.clientX - plug.$mousex + 'px';
+          el.parentElement.style.top = plug.$top + e.clientY - plug.$mousey + 'px';
         }
       },
       data: function() {
         return { 
           activeName: '',
-          plug: []
+          models: [],
+          log:{
+            e: null,
+            plug: null
+          },
+          zIndex: 0
         }
       }
     })
+window.onmousemove = function(e) {
+  if (vue.$data.log.e) {
+    vue.m_windowMousemove(e)
+  }
+}
+
+window.onmouseup = function(e) {
+          vue.$data.log.e = null
+          vue.$data.log.plug = null
+}
   </script>
 </html>
